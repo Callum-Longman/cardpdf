@@ -1,6 +1,6 @@
 import json
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from pathlib import Path
 
 from renderer import build_html
@@ -23,6 +23,7 @@ class App(tk.Tk):
 
         self._build_ui()
         self._refresh_list()
+        self.border_image_path = ""
 
     def _load_files(self):
         for year, fname in [("2014", "spells2014.json"), ("2024", "spells2024.json")]:
@@ -41,9 +42,9 @@ class App(tk.Tk):
         row1 = tk.Frame(self, pady=5)
         row1.pack(fill=tk.X, **pad)
         tk.Label(row1, text="Source:").pack(side=tk.LEFT)
-        self.src = tk.StringVar(value="All")
-        for v in ("All", "2014", "2024"):
-            tk.Radiobutton(row1, text=v, variable=self.src, value=v,
+        self.source = tk.StringVar(value="All")
+        for source_option in ("All", "2014", "2024"):
+            tk.Radiobutton(row1, text=source_option, variable=self.source, value=source_option,
                            command=self._apply_filter).pack(side=tk.LEFT)
 
         tk.Label(row1, text="   Level:").pack(side=tk.LEFT)
@@ -54,25 +55,25 @@ class App(tk.Tk):
         lvl_cb.bind("<<ComboboxSelected>>", lambda _: self._apply_filter())
 
         tk.Label(row1, text="   School:").pack(side=tk.LEFT)
-        self.sch = tk.StringVar(value="All")
+        self.school = tk.StringVar(value="All")
         schools = ["All"] + sorted({
             s.get("school", "").capitalize()
             for s, _ in self.all_spells if s.get("school")
         })
-        sch_cb = ttk.Combobox(row1, textvariable=self.sch, state="readonly", width=13,
-                               values=schools)
+        sch_cb = ttk.Combobox(row1, textvariable=self.school, state="readonly", width=13,
+                              values=schools)
         sch_cb.pack(side=tk.LEFT, padx=2)
         sch_cb.bind("<<ComboboxSelected>>", lambda _: self._apply_filter())
 
         tk.Label(row1, text="   Class:").pack(side=tk.LEFT)
-        self.cls = tk.StringVar(value="All")
+        self.dnd_class = tk.StringVar(value="All")
         classes = ["All"] + sorted({
             c.capitalize()
             for s, _ in self.all_spells
             for c in s.get("classes", [])
         })
-        cls_cb = ttk.Combobox(row1, textvariable=self.cls, state="readonly", width=10,
-                               values=classes)
+        cls_cb = ttk.Combobox(row1, textvariable=self.dnd_class, state="readonly", width=10,
+                              values=classes)
         cls_cb.pack(side=tk.LEFT, padx=2)
         cls_cb.bind("<<ComboboxSelected>>", lambda _: self._apply_filter())
 
@@ -80,9 +81,10 @@ class App(tk.Tk):
         row2 = tk.Frame(self, pady=2)
         row2.pack(fill=tk.X, **pad)
         tk.Label(row2, text="Search:").pack(side=tk.LEFT)
-        self.q = tk.StringVar()
-        self.q.trace_add("write", lambda *_: self._apply_filter())
-        tk.Entry(row2, textvariable=self.q, width=30).pack(side=tk.LEFT, padx=4)
+        self.custom_search = tk.StringVar()
+        self.custom_search.trace_add("write", lambda *_: self._apply_filter())
+        tk.Entry(row2, textvariable=self.custom_search, width=30).pack(side=tk.LEFT, padx=4)
+        tk.Button(row2, text="Border Select", command=self.select_border).pack(side=tk.RIGHT)
 
         # action row
         row3 = tk.Frame(self, pady=2)
@@ -133,17 +135,17 @@ class App(tk.Tk):
     # ── filter + list ─────────────────────────────────────────────────────────
 
     def _apply_filter(self):
-        src = self.src.get()
+        source = self.source.get()
         lvl = self.lvl.get().lower()
-        sch = self.sch.get().lower()
-        cls = self.cls.get().lower()
-        q   = self.q.get().lower()
+        school = self.school.get().lower()
+        dnd_class = self.dnd_class.get().lower()
+        q   = self.custom_search.get().lower()
         self.filtered = [
             (s, r) for s, r in self.all_spells
-            if (src == "All" or r == src)
+            if (source == "All" or r == source)
             and (lvl == "all" or self._lvl_key(s, r) == lvl)
-            and (sch == "all" or s.get("school", "").lower() == sch)
-            and (cls == "all" or cls in [c.lower() for c in s.get("classes", [])])
+            and (school == "all" or s.get("school", "").lower() == school)
+            and (dnd_class == "all" or dnd_class in [c.lower() for c in s.get("classes", [])])
             and (not q or q in s.get("name", "").lower())
         ]
         self._refresh_list()
@@ -186,16 +188,24 @@ class App(tk.Tk):
 
     def _generate(self):
         selected = []
-        for s, r in self.all_spells:
-            v = self.check_vars.get(self._key(s, r))
-            if v and v.get():
-                selected.append((s, r))
+        for source, year in self.all_spells:
+            check_value = self.check_vars.get(self._key(source, year))
+            if check_value and check_value.get():
+                selected.append((source, year))
 
         if not selected:
             messagebox.showwarning("Nothing selected", "Select at least one spell first.")
             return
 
         with open(OUTPUT, "w", encoding="utf-8") as f:
-            f.write(build_html(selected))
+            f.write(build_html(selected, self.border_image_path))
         import webbrowser
         webbrowser.open(OUTPUT.as_uri())
+
+    def select_border(self):
+        path = filedialog.askopenfilename(
+            title="Select Card Border Image",
+            filetypes=[("Image files", "*.png *.jpg *.jpeg"), ("All files", "*.*")]
+        )
+        if path:
+            self.border_image_path = path

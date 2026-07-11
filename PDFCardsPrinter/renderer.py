@@ -11,70 +11,95 @@ def to_html(text):
     return s.replace("\n\n", "<br><br>").replace("\n", "<br>")
 
 
-def card_2014(spell):
-    name      = esc(spell.get("name", ""))
-    type_     = esc(spell.get("type", ""))
-    cast_time = esc(spell.get("casting_time", ""))
-    duration  = esc(spell.get("duration", ""))
-    range_    = esc(spell.get("range", ""))
-    ritual    = spell.get("ritual", False)
-    comp      = spell.get("components", {})
-    comp_raw  = esc(comp.get("raw", ""))
-    desc      = to_html(spell.get("description", ""))
-    higher    = spell.get("higher_levels", "")
+def normalise_spell(spell, edition="2024"):
+    """Convert any spell format to a standard internal format."""
+    if edition == "2014":
+        return {
+            "name": spell.get("name", ""),
+            "type": spell.get("type", ""),
+            "level": None,  # 2014 doesn't have explicit levels
+            "school": None,
+            "action": spell.get("casting_time", ""),
+            "concentration": False,
+            "ritual": spell.get("ritual", False),
+            "range": spell.get("range", ""),
+            "duration": spell.get("duration", ""),
+            "components": spell.get("components", {}).get("raw", ""),
+            "description": spell.get("description", ""),
+            "extra_text": spell.get("higher_levels", ""),
+            "extra_label": "At Higher Levels",
+        }
+    else:  # 2024
+        comps = spell.get("components", [])
+        material = spell.get("material", "")
+        comp_str = ", ".join(c.upper() for c in comps)
+        if material:
+            comp_str += f" ({material})"
 
-    ritual_badge = '<span class="badge">Ritual</span>' if ritual else ""
-    higher_html  = (f'<div class="extra"><em>At Higher Levels:</em> {esc(higher)}</div>'
-                    if higher else "")
-    return (
-        f'<div class="card">'
-        f'<div class="hdr"><span class="name">{name}</span>{ritual_badge}</div>'
-        f'<div class="sub">{type_}</div>'
-        f'<div class="meta">'
-        f'<span><b>Cast:</b> {cast_time}</span><span><b>Range:</b> {range_}</span>'
-        f'<span><b>Duration:</b> {duration}</span><span><b>Components:</b> {comp_raw}</span>'
-        f'</div>'
-        f'<div class="desc">{desc}</div>{higher_html}'
-        f'</div>'
-    )
+        level = spell.get("level", 0)
+        return {
+            "name": spell.get("name", ""),
+            "type": f"{'Cantrip' if level == 0 else f'Level {level}'} · {spell.get('school', '').capitalize()}",
+            "level": level,
+            "school": spell.get("school", ""),
+            "action": spell.get("actionType", ""),
+            "concentration": spell.get("concentration", False),
+            "ritual": spell.get("ritual", False),
+            "range": spell.get("range", ""),
+            "duration": spell.get("duration", ""),
+            "components": comp_str,
+            "description": spell.get("description", ""),
+            "extra_text": spell.get("cantripUpgrade", ""),
+            "extra_label": "Upgrade",
+        }
+import base64
 
+def load_border_image(image_path):
+    """Convert image file to base64."""
+    with open(image_path, 'rb') as f:
+        return base64.b64encode(f.read()).decode()
 
-def card_2024(spell):
-    name     = esc(spell.get("name", ""))
-    level    = spell.get("level", 0)
-    lvl_str  = "Cantrip" if level == 0 else f"Level {level}"
-    school   = esc(spell.get("school", "").capitalize())
-    action   = esc(spell.get("actionType", ""))
-    conc     = spell.get("concentration", False)
-    ritual   = spell.get("ritual", False)
-    range_   = esc(spell.get("range", ""))
-    duration = esc(spell.get("duration", ""))
-    comps    = spell.get("components", [])
-    material = spell.get("material", "")
-    comp_str = ", ".join(c.upper() for c in comps)
-    if material:
-        comp_str += f" ({material})"
-    comp_str = esc(comp_str)
-    desc     = to_html(spell.get("description", ""))
-    upgrade  = spell.get("cantripUpgrade", "")
+def render_card(normalized_spell, border_image):
+    """Single rendering function with optional custom border."""
+    name = esc(normalized_spell["name"])
+    type_ = esc(normalized_spell["type"])
+    action = esc(normalized_spell["action"])
+    range_ = esc(normalized_spell["range"])
+    duration = esc(normalized_spell["duration"])
+    components = esc(normalized_spell["components"])
+    desc = to_html(normalized_spell["description"])
 
     badges = (
-        ('<span class="badge">Conc.</span>' if conc else "") +
-        ('<span class="badge">Ritual</span>' if ritual else "")
+            ('<span class="badge">Conc.</span>' if normalized_spell["concentration"] else "") +
+            ('<span class="badge">Ritual</span>' if normalized_spell["ritual"] else "")
     )
-    upgrade_html = (f'<div class="extra"><em>Upgrade:</em> {esc(upgrade)}</div>'
-                    if upgrade else "")
+
+    extra_html = ""
+    if normalized_spell["extra_text"]:
+        extra_label = normalized_spell["extra_label"]
+        extra_html = f'<div class="extra"><em>{extra_label}:</em> {esc(normalized_spell["extra_text"])}</div>'
+
+    border_style = f'style="background-image: url(data:image/png;base64,{border_image})"' if border_image else ''
+
     return (
-        f'<div class="card">'
+        f'<div class="card" {border_style}>'
+        f'<div class="card-content">'
         f'<div class="hdr"><span class="name">{name}</span>{badges}</div>'
-        f'<div class="sub">{lvl_str} · {school}</div>'
+        f'<div class="sub">{type_}</div>'
         f'<div class="meta">'
         f'<span><b>Action:</b> {action}</span><span><b>Range:</b> {range_}</span>'
-        f'<span><b>Duration:</b> {duration}</span><span><b>Components:</b> {comp_str}</span>'
+        f'<span><b>Duration:</b> {duration}</span><span><b>Components:</b> {components}</span>'
         f'</div>'
-        f'<div class="desc">{desc}</div>{upgrade_html}'
+        f'<div class="desc">{desc}</div>{extra_html}'
+        f'</div>'
         f'</div>'
     )
+
+
+# Usage:
+def card_html(border_image_path: str, spell, edition="2024"):
+    normalised = normalise_spell(spell, edition)
+    return render_card(normalised, load_border_image(border_image_path))
 
 
 CSS = """\
@@ -109,9 +134,21 @@ body { font-family: Georgia, serif; background: #bbb; }
 }
 
 .card {
-  border: 0.5pt solid #444;
-  border-radius: 2pt;
-  padding: 2mm;
+  border: none;
+  border-radius: 0;  /* if using PNG with sharp corners */
+  padding: 0;
+  background-size: 100% 100%;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+  overflow: hidden;
+}
+
+.card-content {
+  padding: 2mm;  /* space inside the border frame */
+  flex: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -157,12 +194,12 @@ body { font-family: Georgia, serif; background: #bbb; }
 """
 
 
-def build_html(selected):
-    pages = [selected[i:i + 9] for i in range(0, len(selected), 9)]
+def build_html(selected_spells, border_image_path: str):
+    pages = [selected_spells[i:i + 9] for i in range(0, len(selected_spells), 9)]
     body = ""
     for page in pages:
         cards = "".join(
-            card_2014(s) if src == "2014" else card_2024(s)
+            card_html(border_image_path, s, src)
             for s, src in page
         )
         cards += '<div class="card card-empty"></div>' * (9 - len(page))
