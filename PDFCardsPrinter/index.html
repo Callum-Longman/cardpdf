@@ -64,6 +64,39 @@
 
   /* ── Card CSS (mirrors renderer.py CSS) ─────────────────────────── */
   #card-output { display: none; }
+
+  /* ── Add Spell Modal ─────────────────────────────────────────────── */
+  #modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.7); z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  #modal-overlay.open { display: flex; }
+  #modal {
+    background: #1e1e1e; border: 1px solid #555; border-radius: 8px;
+    padding: 20px 24px; width: 520px; max-height: 90vh; overflow-y: auto;
+    color: #eee; font-size: 13px;
+  }
+  #modal h2 { margin-bottom: 14px; font-size: 16px; color: #ccc; }
+  .form-row { display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px; }
+  .form-row label { font-size: 12px; color: #aaa; }
+  .form-row input, .form-row select, .form-row textarea {
+    background: #2b2b2b; color: #eee; border: 1px solid #555;
+    padding: 5px 8px; border-radius: 4px; font-size: 13px; font-family: Georgia, serif;
+  }
+  .form-row textarea { resize: vertical; min-height: 70px; }
+  .form-row-inline { display: flex; gap: 16px; align-items: center; margin-bottom: 10px; }
+  .form-row-inline label { display: flex; align-items: center; gap: 5px; font-size: 13px; cursor: pointer; }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+  .modal-btns button {
+    padding: 6px 16px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px;
+  }
+  #modal-save { background: #2a7a45; color: white; }
+  #modal-save:hover { background: #236638; }
+  #modal-cancel { background: #444; color: #eee; }
+  #modal-cancel:hover { background: #555; }
+  #modal-download { background: #3a5f8a; color: white; }
+  #modal-download:hover { background: #2e4d72; }
 </style>
 </head>
 <body>
@@ -112,6 +145,7 @@
 <div id="action-bar">
   <button id="btn-all">Select All</button>
   <button id="btn-none">Select None</button>
+  <button id="btn-add-spell" style="background:#2a4a7a;color:#eee">+ Add Spell</button>
   <span id="status">Loading…</span>
 </div>
 
@@ -120,6 +154,52 @@
 
 <!-- Generate button -->
 <button id="generate-btn">Generate &amp; Open Cards ▶</button>
+
+<!-- Add Spell Modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <h2>Add Custom Spell (2024 Format)</h2>
+    <div class="form-row"><label>Name *</label><input type="text" id="f-name" placeholder="e.g. Fireball"></div>
+    <div style="display:flex;gap:12px">
+      <div class="form-row" style="flex:1"><label>Level (0=Cantrip)</label>
+        <select id="f-level">
+          <option value="0">0 – Cantrip</option>
+          <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+          <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+          <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+        </select>
+      </div>
+      <div class="form-row" style="flex:1"><label>School</label>
+        <select id="f-school">
+          <option>abjuration</option><option>conjuration</option><option>divination</option>
+          <option>enchantment</option><option>evocation</option><option>illusion</option>
+          <option>necromancy</option><option>transmutation</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px">
+      <div class="form-row" style="flex:1"><label>Action Type</label><input type="text" id="f-action" placeholder="e.g. Action, Bonus Action"></div>
+      <div class="form-row" style="flex:1"><label>Range</label><input type="text" id="f-range" placeholder="e.g. 150 feet"></div>
+    </div>
+    <div style="display:flex;gap:12px">
+      <div class="form-row" style="flex:1"><label>Duration</label><input type="text" id="f-duration" placeholder="e.g. Instantaneous"></div>
+      <div class="form-row" style="flex:1"><label>Components (comma-separated)</label><input type="text" id="f-components" placeholder="e.g. V, S, M"></div>
+    </div>
+    <div class="form-row"><label>Material (if any)</label><input type="text" id="f-material" placeholder="e.g. a tiny ball of bat guano"></div>
+    <div class="form-row-inline">
+      <label><input type="checkbox" id="f-concentration"> Concentration</label>
+      <label><input type="checkbox" id="f-ritual"> Ritual</label>
+    </div>
+    <div class="form-row"><label>Classes (comma-separated)</label><input type="text" id="f-classes" placeholder="e.g. Wizard, Sorcerer"></div>
+    <div class="form-row"><label>Description *</label><textarea id="f-description" placeholder="Spell description…"></textarea></div>
+    <div class="form-row"><label>Cantrip Upgrade / At Higher Levels</label><textarea id="f-upgrade" style="min-height:45px" placeholder="Optional upgrade text…"></textarea></div>
+    <div class="modal-btns">
+      <button id="modal-download" title="Download updated spells2024.json">⬇ Export JSON</button>
+      <button id="modal-cancel">Cancel</button>
+      <button id="modal-save">Add Spell</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ── Data ───────────────────────────────────────────────────────────────────
@@ -238,6 +318,65 @@ document.getElementById("btn-all").addEventListener("click", () => {
 document.getElementById("btn-none").addEventListener("click", () => {
   for (const {spell,year} of filtered) checked.set(key(spell,year), false);
   renderList();
+});
+
+// ── Add Spell Modal ───────────────────────────────────────────────────────
+const overlay = document.getElementById("modal-overlay");
+document.getElementById("btn-add-spell").addEventListener("click", () => {
+  overlay.classList.add("open");
+});
+document.getElementById("modal-cancel").addEventListener("click", () => {
+  overlay.classList.remove("open");
+});
+overlay.addEventListener("click", e => { if (e.target === overlay) overlay.classList.remove("open"); });
+
+document.getElementById("modal-save").addEventListener("click", () => {
+  const name = document.getElementById("f-name").value.trim();
+  const desc = document.getElementById("f-description").value.trim();
+  if (!name) { alert("Spell name is required."); return; }
+  if (!desc)  { alert("Description is required."); return; }
+
+  const compRaw = document.getElementById("f-components").value.trim();
+  const components = compRaw ? compRaw.split(",").map(c=>c.trim().toUpperCase()).filter(Boolean) : [];
+  const classRaw = document.getElementById("f-classes").value.trim();
+  const classes = classRaw ? classRaw.split(",").map(c=>c.trim()).filter(Boolean) : [];
+
+  const spell = {
+    name,
+    level: parseInt(document.getElementById("f-level").value),
+    school: document.getElementById("f-school").value,
+    actionType: document.getElementById("f-action").value.trim(),
+    range: document.getElementById("f-range").value.trim(),
+    duration: document.getElementById("f-duration").value.trim(),
+    components,
+    material: document.getElementById("f-material").value.trim(),
+    concentration: document.getElementById("f-concentration").checked,
+    ritual: document.getElementById("f-ritual").checked,
+    classes,
+    description: desc,
+    cantripUpgrade: document.getElementById("f-upgrade").value.trim(),
+  };
+
+  allSpells.push({ spell, year: "2024" });
+  checked.set(key(spell, "2024"), true);
+  populateDropdowns();
+  applyFilter();
+  overlay.classList.remove("open");
+  // clear form
+  ["f-name","f-action","f-range","f-duration","f-components","f-material","f-classes","f-description","f-upgrade"]
+    .forEach(id => document.getElementById(id).value = "");
+  document.getElementById("f-concentration").checked = false;
+  document.getElementById("f-ritual").checked = false;
+  document.getElementById("f-level").value = "0";
+});
+
+document.getElementById("modal-download").addEventListener("click", () => {
+  const spells2024 = allSpells.filter(e => e.year === "2024").map(e => e.spell);
+  const blob = new Blob([JSON.stringify(spells2024, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "spells2024.json";
+  a.click();
 });
 
 // ── Border image ──────────────────────────────────────────────────────────

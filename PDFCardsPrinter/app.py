@@ -91,6 +91,8 @@ class App(tk.Tk):
         row3.pack(fill=tk.X, **pad)
         tk.Button(row3, text="Select All",  command=self._select_all).pack(side=tk.LEFT)
         tk.Button(row3, text="Select None", command=self._select_none).pack(side=tk.LEFT, padx=4)
+        tk.Button(row3, text="+ Add Spell", command=self._open_add_spell,
+                  bg="#2a4a7a", fg="white").pack(side=tk.LEFT, padx=4)
         self.status_lbl = tk.Label(row3, text="0 selected")
         self.status_lbl.pack(side=tk.RIGHT)
 
@@ -183,6 +185,136 @@ class App(tk.Tk):
         for s, r in self.filtered:
             self.check_vars[self._key(s, r)].set(False)
         self._update_status()
+
+    # ── add spell dialog ──────────────────────────────────────────────────────
+
+    def _open_add_spell(self):
+        win = tk.Toplevel(self)
+        win.title("Add Custom Spell (2024)")
+        win.geometry("480x640")
+        win.resizable(False, True)
+        win.grab_set()
+
+        canvas = tk.Canvas(win, highlightthickness=0)
+        sb = ttk.Scrollbar(win, command=canvas.yview)
+        canvas.configure(yscrollcommand=sb.set)
+        sb.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        inner = tk.Frame(canvas)
+        canvas.create_window((0, 0), window=inner, anchor="nw")
+        inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(-1*(e.delta//120), "units"))
+
+        pad = {"padx": 10, "pady": 3, "anchor": "w"}
+
+        def row(label, widget_fn, **kw):
+            tk.Label(inner, text=label).pack(**pad)
+            w = widget_fn(inner, **kw)
+            w.pack(fill=tk.X, padx=10, pady=(0, 6))
+            return w
+
+        name_var = tk.StringVar()
+        row("Name *", tk.Entry, textvariable=name_var)
+
+        levels = ["0 – Cantrip"] + [str(i) for i in range(1, 10)]
+        level_var = tk.StringVar(value=levels[0])
+        tk.Label(inner, text="Level").pack(**pad)
+        ttk.Combobox(inner, textvariable=level_var, values=levels, state="readonly", width=15
+                     ).pack(fill=tk.X, padx=10, pady=(0, 6))
+
+        schools = ["abjuration","conjuration","divination","enchantment",
+                   "evocation","illusion","necromancy","transmutation"]
+        school_var = tk.StringVar(value=schools[0])
+        tk.Label(inner, text="School").pack(**pad)
+        ttk.Combobox(inner, textvariable=school_var, values=schools, state="readonly"
+                     ).pack(fill=tk.X, padx=10, pady=(0, 6))
+
+        action_var   = tk.StringVar()
+        range_var    = tk.StringVar()
+        duration_var = tk.StringVar()
+        comp_var     = tk.StringVar()
+        material_var = tk.StringVar()
+        classes_var  = tk.StringVar()
+
+        row("Action Type (e.g. Action, Bonus Action)", tk.Entry, textvariable=action_var)
+        row("Range (e.g. 150 feet)", tk.Entry, textvariable=range_var)
+        row("Duration (e.g. Instantaneous)", tk.Entry, textvariable=duration_var)
+        row("Components, comma-separated (e.g. V, S, M)", tk.Entry, textvariable=comp_var)
+        row("Material (if any)", tk.Entry, textvariable=material_var)
+
+        conc_var  = tk.BooleanVar()
+        ritual_var= tk.BooleanVar()
+        flag_row = tk.Frame(inner)
+        flag_row.pack(fill=tk.X, padx=10, pady=4)
+        tk.Checkbutton(flag_row, text="Concentration", variable=conc_var).pack(side=tk.LEFT)
+        tk.Checkbutton(flag_row, text="Ritual",        variable=ritual_var).pack(side=tk.LEFT, padx=12)
+
+        row("Classes, comma-separated (e.g. Wizard, Sorcerer)", tk.Entry, textvariable=classes_var)
+
+        tk.Label(inner, text="Description *").pack(**pad)
+        desc_text = tk.Text(inner, height=6, wrap=tk.WORD)
+        desc_text.pack(fill=tk.X, padx=10, pady=(0, 6))
+
+        tk.Label(inner, text="Cantrip Upgrade / At Higher Levels").pack(**pad)
+        upgrade_text = tk.Text(inner, height=3, wrap=tk.WORD)
+        upgrade_text.pack(fill=tk.X, padx=10, pady=(0, 6))
+
+        def save():
+            name = name_var.get().strip()
+            desc = desc_text.get("1.0", tk.END).strip()
+            if not name:
+                messagebox.showwarning("Missing field", "Spell name is required.", parent=win)
+                return
+            if not desc:
+                messagebox.showwarning("Missing field", "Description is required.", parent=win)
+                return
+
+            raw_level = level_var.get().split("–")[0].strip()
+            level = 0 if raw_level == "0" else int(raw_level)
+            comps   = [c.strip().upper() for c in comp_var.get().split(",") if c.strip()]
+            classes = [c.strip() for c in classes_var.get().split(",") if c.strip()]
+
+            spell = {
+                "name": name,
+                "level": level,
+                "school": school_var.get(),
+                "actionType": action_var.get().strip(),
+                "range": range_var.get().strip(),
+                "duration": duration_var.get().strip(),
+                "components": comps,
+                "material": material_var.get().strip(),
+                "concentration": conc_var.get(),
+                "ritual": ritual_var.get(),
+                "classes": classes,
+                "description": desc,
+                "cantripUpgrade": upgrade_text.get("1.0", tk.END).strip(),
+            }
+            self.all_spells.append((spell, "2024"))
+            key = self._key(spell, "2024")
+            self.check_vars[key] = tk.BooleanVar(value=True)
+            self._apply_filter()
+            win.destroy()
+
+        def export_json():
+            spells_2024 = [s for s, y in self.all_spells if y == "2024"]
+            path = filedialog.asksaveasfilename(
+                defaultextension=".json",
+                initialfile="spells2024.json",
+                filetypes=[("JSON", "*.json")],
+                parent=win,
+            )
+            if path:
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(spells_2024, f, indent=2, ensure_ascii=False)
+                messagebox.showinfo("Exported", f"Saved to {path}", parent=win)
+
+        btn_row = tk.Frame(inner)
+        btn_row.pack(fill=tk.X, padx=10, pady=8)
+        tk.Button(btn_row, text="⬇ Export JSON", command=export_json,
+                  bg="#3a5f8a", fg="white").pack(side=tk.LEFT)
+        tk.Button(btn_row, text="Cancel", command=win.destroy).pack(side=tk.RIGHT, padx=(4, 0))
+        tk.Button(btn_row, text="Add Spell", command=save,
+                  bg="#2a7a45", fg="white").pack(side=tk.RIGHT)
 
     # ── generate ──────────────────────────────────────────────────────────────
 
