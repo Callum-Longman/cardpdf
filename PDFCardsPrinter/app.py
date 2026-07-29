@@ -6,6 +6,7 @@ from pathlib import Path
 from renderer import build_html
 
 BASE_DIR = Path(__file__).parent
+DOCS_DIR = BASE_DIR.parent / "docs"
 OUTPUT = BASE_DIR / "output.html"
 
 
@@ -27,7 +28,7 @@ class App(tk.Tk):
 
     def _load_files(self):
         for year, fname in [("2014", "spells2014.json"), ("2024", "spells2024.json")]:
-            p = BASE_DIR / fname
+            p = DOCS_DIR / fname
             if p.exists():
                 with open(p, encoding="utf-8") as f:
                     for spell in json.load(f):
