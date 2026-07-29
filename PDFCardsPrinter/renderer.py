@@ -28,6 +28,7 @@ def normalise_spell(spell, edition="2024"):
             "description": spell.get("description", ""),
             "extra_text": spell.get("higher_levels", ""),
             "extra_label": "At Higher Levels",
+            "higher_level_slot": "",
         }
     else:  # 2024
         comps = spell.get("components", [])
@@ -51,6 +52,7 @@ def normalise_spell(spell, edition="2024"):
             "description": spell.get("description", ""),
             "extra_text": spell.get("cantripUpgrade", ""),
             "extra_label": "Upgrade",
+            "higher_level_slot": spell.get("higherLevelSlot", ""),
         }
 import base64
 
@@ -74,6 +76,10 @@ def render_card(normalized_spell, border_image):
             ('<span class="badge">Ritual</span>' if normalized_spell["ritual"] else "")
     )
 
+    higher_slot_html = ""
+    if normalized_spell.get("higher_level_slot"):
+        higher_slot_html = f'<div class="extra"><em>At Higher Levels:</em> {esc(normalized_spell["higher_level_slot"])}</div>'
+
     extra_html = ""
     if normalized_spell["extra_text"]:
         extra_label = normalized_spell["extra_label"]
@@ -90,7 +96,7 @@ def render_card(normalized_spell, border_image):
         f'<span><b>Action:</b> {action}</span><span><b>Range:</b> {range_}</span>'
         f'<span><b>Duration:</b> {duration}</span><span><b>Components:</b> {components}</span>'
         f'</div>'
-        f'<div class="desc">{desc}</div>{extra_html}'
+        f'<div class="desc">{desc}</div>{extra_html}{higher_slot_html}'
         f'</div>'
         f'</div>'
     )
@@ -147,7 +153,7 @@ body { font-family: Georgia, serif; background: #bbb; }
 }
 
 .card-content {
-  padding: 2mm;  /* space inside the border frame */
+  padding: 6mm;  /* space inside the border frame */
   flex: 1;
   overflow: hidden;
   display: flex;
