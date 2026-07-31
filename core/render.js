@@ -12,8 +12,11 @@ function toHTML(text) {
   return s.replace(/\n\n/g,"<br><br>").replace(/\n/g,"<br>");
 }
 
-function capitalize(s) {
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
+function capitalise(s) {
+  if (!s) return "";
+  return s.split(' ').map(word =>
+    word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : ""
+  ).join(' ');
 }
 
 function normaliseSpell(spell, edition) {
@@ -42,7 +45,7 @@ function normaliseSpell(spell, edition) {
   const level   = spell.level??0;
   return {
     name: spell.name||"",
-    type: `${level===0?"Cantrip":`Level ${level}`} · ${capitalize(spell.school||"")}`,
+    type: `${level===0?"Cantrip":`Level ${level}`} · ${capitalise(spell.school||"")}`,
     level,
     school: spell.school||"",
     action: spell.actionType||"",
@@ -70,7 +73,7 @@ function renderCard(n, borderDataUrl) {
     + `<div class="hdr"><span class="name">${esc(n.name)}</span>${badges}</div>`
     + `<div class="sub">${esc(n.type)}</div>`
     + `<div class="meta">`
-    + `<span><b>Action:</b> ${esc(n.action)}</span><span><b>Range:</b> ${esc(n.range)}</span>`
+    + `<span><b>Action:</b> ${esc((n.action || "").trim() ? capitalise(n.action.trim()) : n.action)}</span><span><b>Range:</b> ${esc(n.range)}</span>`
     + `<span><b>Duration:</b> ${esc(n.duration)}</span><span><b>Components:</b> ${esc(n.components)}</span>`
     + `</div>`
     + `<div class="desc">${toHTML(n.description)}</div>${extraHTML}`
@@ -117,7 +120,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     esc,
     toHTML,
-    capitalize,
+    capitalise,
     normaliseSpell,
     renderCard,
     CARD_CSS,
