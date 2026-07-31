@@ -3,7 +3,7 @@
 // Usage: node render-cli.js <spells-json> <border-base64-or-empty> > output.html
 
 const fs = require('fs');
-const { buildHTML } = require('../core/render.js');
+const { buildHTML } = require('./core/render.js');
 
 const spellsJson = process.argv[2];
 const borderArg = process.argv[3] || '';

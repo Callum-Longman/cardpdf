@@ -5,8 +5,8 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
 CORE_DIR = BASE_DIR.parent / "core"
-DOCS_DIR = BASE_DIR.parent / "docs"
-RENDER_CLI = DOCS_DIR / "render-cli.js"
+ROOT_DIR = BASE_DIR.parent
+RENDER_CLI = ROOT_DIR / "render-cli.js"
 
 
 def build_html(selected_spells, border_image_path: str):
