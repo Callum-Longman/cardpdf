@@ -201,8 +201,8 @@
   </div>
 </div>
 
-<script src="/core/render.js"></script>
-<script src="/core/filter.js"></script>
+<script src="./core/render.js"></script>
+<script src="./core/filter.js"></script>
 <script>
 // ── Data ───────────────────────────────────────────────────────────────────
 let allSpells = [];    // [{spell, year}]
@@ -214,7 +214,7 @@ function key(spell, year) { return `${year}::${spell.name}`; }
 
 async function loadJSON(file, year) {
   try {
-    const r = await fetch(`/core/${file}`);
+    const r = await fetch(`./core/${file}`);
     if (!r.ok) return;
     const data = await r.json();
     for (const spell of data) allSpells.push({ spell, year });
