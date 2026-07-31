@@ -8,3 +8,9 @@
 __pycache__/
 *.pyc
 *.pyo
+
+# Temp files
+.temp_*.json
+
+# Local output
+local/output.html
