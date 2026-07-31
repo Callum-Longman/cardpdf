@@ -98,7 +98,7 @@ body { font-family: Georgia, serif; background: #bbb; }
 .badge { font-size: 5pt; background: #333; color: #fff; padding: .4mm 1mm; border-radius: 1pt; white-space: nowrap; flex-shrink: 0; align-self: center; }
 .sub { font-size: 5.5pt; font-style: italic; color: #555; }
 .meta { display: grid; grid-template-columns: 1fr 1fr; gap: .3mm 2mm; font-size: 6pt; }
-.desc { font-size: 5.5pt; line-height: 1.35; flex: 1; overflow: hidden; }
+.desc { font-size: 4.5pt; line-height: 1.35; flex: 1; overflow: hidden; }
 .extra { font-size: 5.5pt; font-style: italic; color: #444; border-top: .5pt solid #ccc; padding-top: 1mm; overflow: hidden; }
 `;
 
