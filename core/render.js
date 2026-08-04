@@ -43,9 +43,10 @@ function normaliseSpell(spell, edition) {
   let comp_str  = comps.map(c=>c.toUpperCase()).join(", ");
   if (material) comp_str += ` (${material})`;
   const level   = spell.level??0;
+  const isCantrip = level === 0;
   return {
     name: spell.name||"",
-    type: `${level===0?"Cantrip":`Level ${level}`} · ${capitalise(spell.school||"")}`,
+    type: `${isCantrip?"Cantrip":`Level ${level}`} · ${capitalise(spell.school||"")}`,
     level,
     school: spell.school||"",
     action: spell.actionType||"",
@@ -55,8 +56,8 @@ function normaliseSpell(spell, edition) {
     duration: spell.duration||"",
     components: comp_str,
     description: spell.description||"",
-    extra_text: spell.cantripUpgrade||"",
-    extra_label: "Upgrade",
+    extra_text: isCantrip ? (spell.cantripUpgrade||"") : (spell.higherLevelSlot||""),
+    extra_label: isCantrip ? "Upgrade" : "At Higher Levels",
   };
 }
 
