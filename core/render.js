@@ -80,7 +80,13 @@ function renderCard(n, borderDataUrl) {
     + `</div></div>`;
 }
 
-const CARD_CSS = `
+const DEFAULT_PADDING_MM = 6;
+const DEFAULT_FONT_SIZE_PT = 5.5;
+
+function buildCardCSS(paddingMm, fontSizePt) {
+  const pad = (paddingMm != null && paddingMm !== "") ? `${paddingMm}mm` : `${DEFAULT_PADDING_MM}mm`;
+  const fs  = (fontSizePt != null && fontSizePt !== "") ? `${fontSizePt}pt` : `${DEFAULT_FONT_SIZE_PT}pt`;
+  return `
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Georgia, serif; background: #bbb; }
 @media print {
@@ -91,18 +97,21 @@ body { font-family: Georgia, serif; background: #bbb; }
 }
 .page { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 2mm; width: 210mm; height: 297mm; padding: 8mm; margin: 14px auto; background: white; box-shadow: 0 2px 12px rgba(0,0,0,.35); }
 .card { border: none; border-radius: 0; padding: 0; background-size: 100% 100%; background-position: 0 0; background-repeat: no-repeat; display: flex; flex-direction: column; gap: 1mm; overflow: hidden; }
-.card-content { padding: 6mm; flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 1mm; }
+.card-content { padding: ${pad}; flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 1mm; }
 .card-empty { border: 0.5pt dashed #bbb; }
 .hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 1mm; border-bottom: 0.5pt solid #555; padding-bottom: 1mm; }
-.name { font-size: 7.5pt; font-weight: bold; line-height: 1.2; }
-.badge { font-size: 5pt; background: #333; color: #fff; padding: .4mm 1mm; border-radius: 1pt; white-space: nowrap; flex-shrink: 0; align-self: center; }
-.sub { font-size: 5.5pt; font-style: italic; color: #555; }
-.meta { display: grid; grid-template-columns: 1fr 1fr; gap: .3mm 2mm; font-size: 6pt; }
-.desc { font-size: 5.5pt; line-height: 1.35; flex: 1; overflow: hidden; }
-.extra { font-size: 5.5pt; font-style: italic; color: #444; border-top: .5pt solid #ccc; padding-top: 1mm; overflow: hidden; }
+.name { font-size: 10pt; font-weight: bold; line-height: 1.2; }
+.badge { font-size: ${fs}; background: #333; color: #fff; padding: .4mm 1mm; border-radius: 1pt; white-space: nowrap; flex-shrink: 0; align-self: center; }
+.sub { font-size: ${fs}; font-style: italic; color: #555; }
+.meta { display: grid; grid-template-columns: 1fr 1fr; gap: .3mm 2mm; font-size: ${fs}; }
+.desc { font-size: ${fs}; line-height: 1.35; flex: 1; overflow: hidden; }
+.extra { font-size: ${fs}; font-style: italic; color: #444; border-top: .5pt solid #ccc; padding-top: 1mm; overflow: hidden; }
 `;
+}
 
-function buildHTML(selected, borderDataUrl) {
+const CARD_CSS = buildCardCSS();
+
+function buildHTML(selected, borderDataUrl, paddingMm, fontSizePt) {
   const pages = [];
   for (let i=0; i<selected.length; i+=9) pages.push(selected.slice(i,i+9));
   let body = "";
@@ -112,7 +121,7 @@ function buildHTML(selected, borderDataUrl) {
     body += `<div class="page">${cards}</div>\n`;
   }
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Spell Cards</title>`
-    + `<style>${CARD_CSS}</style></head><body>${body}</body></html>`;
+    + `<style>${buildCardCSS(paddingMm, fontSizePt)}</style></head><body>${body}</body></html>`;
 }
 
 // Export for Node.js
@@ -124,6 +133,7 @@ if (typeof module !== 'undefined' && module.exports) {
     normaliseSpell,
     renderCard,
     CARD_CSS,
+    buildCardCSS,
     buildHTML,
   };
 }
